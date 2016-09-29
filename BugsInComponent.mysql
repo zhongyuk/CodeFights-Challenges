@@ -1,0 +1,49 @@
+/*
+** Database Challenge **
+** Bugs In Components **
+You recently started working at a promising new startup. Now that you're at the end of the first week, you're surprised the product is still working at all: there are bugs in almost every one of its components!
+
+Information about all bugs is stored in a table Bug, and information about components is stored in a Component table. Since some bugs may be present in several components and vice versa, the additional BugComponent table contains rows representing connections between bugs and components. In the database the tables are stored as follows:
+
+Bug:
+num: unique bug number
+title: bug title
+Component:
+id: unique component id
+title: component title
+BugComponent:
+bug_num: foreign key referencing Bug.num
+component_id: foreign key referencing Component.id
+There are so many bugs that you don't know what to begin with. To help yourself decide, you want to find all bugs that affect more than one component, and find these components' names. Since it's difficult to test too buggy components, you also want to know how many bugs each such component has. The resulting table should thus contain the following columns:
+
+bug_title: bug title
+component_title: title of the component to which this bug belongs
+bugs_in_component: total number of bugs in this component
+The results should be sorted by the number of bugs in the component in the descending order. In case of a tie, the component with the smallest id should go first. In case it's not enough to break a tie, bug_num should be a tie-breaker: the bug with the smallest num should go first.
+*/
+
+CREATE PROCEDURE bugsInComponent()
+BEGIN
+SELECT BCBC.bug_title AS bug_title, BCBC.component_title AS component_title,
+BIC.bugs_in_component AS bugs_in_component
+FROM
+(SELECT BCBug.bug_num AS bug_num, BCBug.component_id AS component_id,
+BCBug.bug_title AS bug_title, Component.title AS component_title
+FROM
+(SELECT BC.bug_num AS bug_num, BC.component_id AS component_id,
+Bug.title AS bug_title
+FROM
+(SELECT bug_num, component_id FROM BugComponent
+WHERE bug_num IN
+(SELECT t.bug_num
+FROM
+(SELECT DISTINCT bug_num, COUNT(component_id) AS count_id
+FROM BugComponent GROUP BY bug_num) AS t
+WHERE t.count_id > 1)) AS BC
+LEFT JOIN Bug ON BC.bug_num = Bug.num) AS BCBug
+LEFT JOIN Component ON BCBug.component_id = Component.id) AS BCBC
+LEFT JOIN
+(SELECT DISTINCT component_id, COUNT(bug_num) AS bugs_in_component FROM BugComponent GROUP BY component_id) AS BIC
+ON BCBC.component_id = BIC.component_id
+ORDER BY bugs_in_component DESC, BCBC.component_id ASC, bug_num ASC;
+END
